@@ -27,6 +27,22 @@ from gr00t.configs.finetune_config import FinetuneConfig
 from gr00t.experiment.experiment import run
 
 
+def parse_extra_dataset(spec: str) -> dict:
+    """Parse ``<dataset_path>:<embodiment_tag>[:<mix_ratio>]`` into a dataset config dict."""
+    from gr00t.data.embodiment_tags import EmbodimentTag
+
+    path, _, rest = spec.partition(":")
+    tag, _, ratio = rest.partition(":")
+    if not path or not tag:
+        raise ValueError(f"Invalid --extra_datasets entry {spec!r}; expected path:tag[:ratio]")
+    ratio = float(ratio) if ratio else 1.0
+    return {
+        "dataset_paths": [p for p in path.split(os.pathsep) if p],
+        "mix_ratio": ratio,
+        "embodiment_tag": EmbodimentTag.resolve(tag).value,
+    }
+
+
 # Make sure the user provided modality config is registered.
 def load_modality_config(modality_config_path: str):
     import importlib
@@ -58,17 +74,19 @@ if __name__ == "__main__":
 
     dataset_paths = [path for path in ft_config.dataset_path.split(os.pathsep) if path]
 
+    datasets = [
+        {
+            "dataset_paths": dataset_paths,
+            "mix_ratio": ft_config.mix_ratio,
+            "embodiment_tag": embodiment_tag,
+        }
+    ] + [parse_extra_dataset(spec) for spec in ft_config.extra_datasets]
+
     config = get_default_config().load_dict(
         {
             "data": {
                 "download_cache": False,
-                "datasets": [
-                    {
-                        "dataset_paths": dataset_paths,
-                        "mix_ratio": 1.0,
-                        "embodiment_tag": embodiment_tag,
-                    }
-                ],
+                "datasets": datasets,
             }
         }
     )
@@ -83,6 +101,7 @@ if __name__ == "__main__":
     config.model.random_rotation_angle = ft_config.random_rotation_angle
     config.model.color_jitter_params = ft_config.color_jitter_params
     config.model.use_percentiles = ft_config.use_percentiles
+    config.model.letter_box_transform = ft_config.letter_box_transform
     if (ft_config.shortest_image_edge is None) != (ft_config.crop_fraction is None):
         raise ValueError("shortest_image_edge and crop_fraction must be set together")
     if ft_config.shortest_image_edge is not None:

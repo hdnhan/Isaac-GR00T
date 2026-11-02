@@ -14,7 +14,7 @@
 # limitations under the License.
 
 # Finetune config used for single node post-training.
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import warnings
 
 
@@ -38,6 +38,16 @@ class FinetuneConfig:
 
     embodiment_tag: str
     """Embodiment tag (name or value, case-insensitive). See EmbodimentTag for known tags."""
+
+    mix_ratio: float = 1.0
+    """Sampling ratio of ``dataset_path`` relative to ``extra_datasets`` (normalized across all datasets)."""
+
+    extra_datasets: list[str] = field(default_factory=list)
+    """
+    Additional datasets to co-train with, each as ``<dataset_path>:<embodiment_tag>:<mix_ratio>``
+    (``mix_ratio`` optional, default 1.0). Each embodiment tag needs its own modality config and
+    uses its own projector slot, so datasets may have different state/action spaces.
+    """
 
     modality_config_path: str | None = None
     """
@@ -172,6 +182,10 @@ class FinetuneConfig:
     ds_weights_alpha: float | None = None
     """Power-law exponent for dataset soup weighting. When set, each dataset's
     sampling weight is len(dataset)^alpha and per-dataset mix_ratio values are ignored."""
+
+    letter_box_transform: bool = False
+    """If True, pad every camera view to a square before resizing so views with different
+    aspect ratios (e.g. 600x960 head vs 480x640 wrist cameras) can be stacked in one sample."""
 
     shard_size: int = 2**10
     """Size of the shard to use for the dataset during preloading."""

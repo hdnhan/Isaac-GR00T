@@ -74,6 +74,8 @@ _PROJECTOR_INDEX_GROUPS: dict[int, set[str]] = {
     # `new_embodiment`.
     10: {"new_embodiment", "robocasa_panda_omron", "robocasa_gr1_tabletop"},
     11: {"unitree_g1_sonic"},
+    # Second finetune placeholder projector, for co-training two custom robots.
+    12: {"new_embodiment_2"},
     24: {"oxe_droid_relative_eef_relative_joint"},
     # Same G1 embodiment either side of the pretrain/posttrain boundary
     # (`real_g1_*` is pretrain, `unitree_g1_full_body_*` is posttrain).
@@ -877,6 +879,7 @@ class Gr00tN1d7Processor(BaseProcessor):
                 "max_action_horizon",
                 "max_state_dim",
                 "max_action_dim",
+                "letter_box_transform",
             ]
             for key in override_keys:
                 if key in kwargs:

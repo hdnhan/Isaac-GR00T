@@ -172,7 +172,8 @@ class Gr00tN1d7Pipeline(ModelPipeline):
                 extra_augmentation_config=self.model_config.extra_augmentation_config,
                 shortest_image_edge=self.model_config.shortest_image_edge,
                 crop_fraction=self.model_config.crop_fraction,
-                letter_box_transform=letter_box_transform,
+                # None keeps the checkpoint's saved value; only an explicit True overrides it.
+                letter_box_transform=letter_box_transform or None,
                 transformers_loading_kwargs=self.transformers_loading_kwargs,
                 use_alternate_vl_dit=self.model_config.use_alternate_vl_dit,
                 use_relative_action=self.model_config.use_relative_action,

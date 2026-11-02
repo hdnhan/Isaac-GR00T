@@ -48,6 +48,7 @@ class EmbodimentTag(Enum):
 
     Finetuning tag (for custom robots):
     - NEW_EMBODIMENT        -> "new_embodiment"
+    - NEW_EMBODIMENT_2      -> "new_embodiment_2"
     - ROBOCASA_PANDA_OMRON  -> "robocasa_panda_omron"
     - ROBOCASA_GR1_TABLETOP -> "robocasa_gr1_tabletop"
 
@@ -128,6 +129,12 @@ class EmbodimentTag(Enum):
     NEW_EMBODIMENT = "new_embodiment"
     """
     Any new embodiment.
+    """
+
+    NEW_EMBODIMENT_2 = "new_embodiment_2"
+    """
+    Second custom embodiment with its own projector slot, for co-training two
+    robots with different state/action spaces alongside NEW_EMBODIMENT.
     """
 
     ROBOCASA_GR1_TABLETOP = "robocasa_gr1_tabletop"
@@ -217,6 +224,7 @@ POSTTRAIN_TAGS: frozenset[EmbodimentTag] = frozenset(
 FINETUNE_ONLY_TAGS: frozenset[EmbodimentTag] = frozenset(
     {
         EmbodimentTag.NEW_EMBODIMENT,
+        EmbodimentTag.NEW_EMBODIMENT_2,
         EmbodimentTag.ROBOCASA_PANDA_OMRON,
         EmbodimentTag.ROBOCASA_GR1_TABLETOP,
     }

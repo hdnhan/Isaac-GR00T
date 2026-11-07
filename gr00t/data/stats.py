@@ -38,6 +38,8 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
 from tqdm import tqdm
 
 from gr00t.configs.data.embodiment_configs import MODALITY_CONFIGS
@@ -134,6 +136,30 @@ def _dump_stats_cache_atomic(path: Path, data: dict[str, Any], *, indent: int | 
         raise
 
 
+def _read_parquet_plain(parquet_path: Path, columns: list[str] | None) -> pd.DataFrame:
+    """Read a parquet file with any Arrow extension columns unwrapped to their storage type.
+
+    HF ``datasets`` Array2D/3D columns otherwise become ``PandasArrayExtensionDtype``, whose
+    dtype comparison is broken and makes ``pd.concat`` raise ``AttributeError: ... 'v'``.
+    """
+    table = pq.read_table(parquet_path, columns=columns)
+    for i, field in enumerate(table.schema):
+        if isinstance(field.type, pa.ExtensionType):
+            storage = pa.chunked_array(
+                [chunk.storage for chunk in table.column(i).chunks],
+                type=field.type.storage_type,
+            )
+            table = table.set_column(i, pa.field(field.name, storage.type), storage)
+    return table.replace_schema_metadata(None).to_pandas()
+
+
+def _as_flat_row(x: Any) -> np.ndarray:
+    arr = np.asarray(x)
+    if arr.dtype == object:  # nested lists come back as arrays of arrays
+        arr = np.stack(arr)
+    return arr.astype(np.float32).reshape(-1)
+
+
 def calculate_dataset_statistics(
     parquet_paths: list[Path], features: list[str] | None = None
 ) -> dict[str, dict[str, float]]:
@@ -155,20 +181,16 @@ def calculate_dataset_statistics(
         sorted(list(parquet_paths)),
         desc="Collecting all parquet files...",
     ):
-        # Load the parquet file
-        parquet_data = pd.read_parquet(parquet_path)
-        parquet_data = parquet_data
-        all_low_dim_data_list.append(parquet_data)
-    all_low_dim_data = pd.concat(all_low_dim_data_list, axis=0)
+        all_low_dim_data_list.append(_read_parquet_plain(parquet_path, features))
+    all_low_dim_data = pd.concat(all_low_dim_data_list, axis=0, ignore_index=True)
     # Compute dataset statistics
     dataset_statistics = {}
     if features is None:
         features = list(all_low_dim_data.columns)
     for le_modality in features:
         print(f"Computing statistics for {le_modality}...")
-        np_data = np.vstack(
-            [np.asarray(x, dtype=np.float32) for x in all_low_dim_data[le_modality]]
-        )
+        # Multi-dim features (e.g. a [3, 3] matrix) are flattened to per-element stats.
+        np_data = np.vstack([_as_flat_row(x) for x in all_low_dim_data[le_modality]])
         dataset_statistics[le_modality] = dict(
             mean=np.mean(np_data, axis=0).tolist(),
             std=np.std(np_data, axis=0).tolist(),

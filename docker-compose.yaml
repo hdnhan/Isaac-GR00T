@@ -6,13 +6,14 @@ services:
       context: .
       dockerfile: Dockerfile
 
-    privileged: true
+    # privileged: true
     network_mode: host
     ipc: host
 
     gpus: all
     runtime: nvidia
 
+    user: "${UID}:1000"
     environment:
       DISPLAY: ${DISPLAY:-1}
       ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-0}
@@ -21,7 +22,7 @@ services:
       NVIDIA_DRIVER_CAPABILITIES: compute,utility,video,graphics
 
     volumes:
-      - /dev:/dev
+      # - /dev:/dev
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
